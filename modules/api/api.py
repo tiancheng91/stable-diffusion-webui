@@ -320,6 +320,9 @@ class Api:
         send_images = args.pop('send_images', True)
         args.pop('save_images', None)
 
+        if self.queue_lock.locked():
+           raise HTTPException(status_code=500, detail="system is busy")
+
         with self.queue_lock:
             p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model, **args)
             p.scripts = script_runner
@@ -342,7 +345,9 @@ class Api:
     def img2imgapi(self, img2imgreq: models.StableDiffusionImg2ImgProcessingAPI):
         init_images = img2imgreq.init_images
         if init_images is None:
-            raise HTTPException(status_code=404, detail="Init image not found")
+           raise HTTPException(status_code=500, detail="image not found")
+        if self.queue_lock.locked():
+           raise HTTPException(status_code=500, detail="system is busy")
 
         mask = img2imgreq.mask
         if mask:
